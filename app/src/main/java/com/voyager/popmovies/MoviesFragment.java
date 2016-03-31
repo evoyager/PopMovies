@@ -30,6 +30,7 @@ import java.util.ArrayList;
 public class MoviesFragment extends Fragment {
 
     private ArrayAdapter<String> mMoviesAdapter;
+    SharedPreferences prefs;
 
     public MoviesFragment() {}
 
@@ -67,7 +68,10 @@ public class MoviesFragment extends Fragment {
 
     private void updateMovies() {
         FetchMoviesTask moviesTask = new FetchMoviesTask();
-        moviesTask.execute(10);
+        prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String movies_number = prefs.getString(getString(R.string.pref_movies_number_key),
+                getString(R.string.pref_movies_number_default));
+        moviesTask.execute(Integer.parseInt(movies_number));
     }
 
     @Override
@@ -79,6 +83,7 @@ public class MoviesFragment extends Fragment {
     public class FetchMoviesTask extends AsyncTask<Integer, Void, String[]> {
 
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
+        String sortingMethod;
 
         private String[] getMoviesDataFromJson(String moviesJsonStr, Integer numOfMovies)
                 throws JSONException {
@@ -88,16 +93,33 @@ public class MoviesFragment extends Fragment {
             JSONObject moviesJson = new JSONObject(moviesJsonStr);
             JSONArray moviesArray = moviesJson.getJSONArray(RESULTS);
 
+            if (numOfMovies > moviesArray.length())
+                numOfMovies = moviesArray.length();
             String[] resultStrs = new String[numOfMovies];
 
-            for(int i = 0; i < resultStrs.length; i++) {
+            for(int i = 0; i < numOfMovies; i++) {
                 String title;
-                Double vote_average;
+                String rating="";
+                String rating_key;
+                final String TOP_RATED = "top_rated";
+                final String MOST_POPULAR = "popular";
 
                 JSONObject movie = moviesArray.getJSONObject(i);
                 title = movie.getString("title");
-                vote_average = movie.getDouble("vote_average");
-                resultStrs[i] = title + " " + vote_average;
+
+                switch(sortingMethod) {
+                    case TOP_RATED:
+                        rating_key = "vote_average";
+                        rating = "[vote average]: " + movie.getDouble(rating_key);
+                        break;
+                    case MOST_POPULAR:
+                        rating_key = "popularity";
+                        rating = "[popularity]: " + movie.getDouble(rating_key);
+                        break;
+                    default: rating_key = null;
+                }
+
+                resultStrs[i] = title + "\n" + rating;
             }
 
             return resultStrs;
@@ -114,12 +136,9 @@ public class MoviesFragment extends Fragment {
             try {
                 final String MOVIES_BASE_URL =
                         "http://api.themoviedb.org/3/movie/";
-                final String SORT_METHOD = "top_rated";
                 final String KEY_PARAM = "api_key";
 
-                SharedPreferences sharedPrefs =
-                        PreferenceManager.getDefaultSharedPreferences(getActivity());
-                String sortingMethod = sharedPrefs.getString(
+                sortingMethod = prefs.getString(
                         getString(R.string.pref_sorting_key),
                         getString(R.string.pref_sorting_top_rated));
 
