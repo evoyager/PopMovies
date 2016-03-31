@@ -1,9 +1,11 @@
 package com.voyager.popmovies;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -107,61 +109,50 @@ public class MoviesFragment extends Fragment {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
 
-            // Will contain the raw JSON response as a string.
             String moviesJsonStr = null;
 
-            String format = "json";
-            String units = "metric";
-            int numDays = 7;
-
             try {
-                // Construct the URL for the OpenWeatherMap query
-                // Possible parameters are avaiable at OWM's forecast API page, at
-                // http://openweathermap.org/API#forecast
                 final String MOVIES_BASE_URL =
                         "http://api.themoviedb.org/3/movie/";
                 final String SORT_METHOD = "top_rated";
                 final String KEY_PARAM = "api_key";
 
+                SharedPreferences sharedPrefs =
+                        PreferenceManager.getDefaultSharedPreferences(getActivity());
+                String sortingMethod = sharedPrefs.getString(
+                        getString(R.string.pref_sorting_key),
+                        getString(R.string.pref_sorting_top_rated));
+
                 Uri builtUri = Uri.parse(MOVIES_BASE_URL).buildUpon()
-                        .appendPath(SORT_METHOD)
+                        .appendPath(sortingMethod)
                         .appendQueryParameter(KEY_PARAM, BuildConfig.MOVIE_DB_API_KEY)
                         .build();
 
                 URL url = new URL(builtUri.toString());
 
-                // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
                 urlConnection.connect();
 
-                // Read the input stream into a String
                 InputStream inputStream = urlConnection.getInputStream();
                 StringBuffer buffer = new StringBuffer();
                 if (inputStream == null) {
-                    // Nothing to do.
                     return null;
                 }
                 reader = new BufferedReader(new InputStreamReader(inputStream));
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
-                    // But it does make debugging a *lot* easier if you print out the completed
-                    // buffer for debugging.
                     buffer.append(line + "\n");
                 }
 
                 if (buffer.length() == 0) {
-                    // Stream was empty.  No point in parsing.
                     return null;
                 }
                 moviesJsonStr = buffer.toString();
 //                Log.v(LOG_TAG, "Pased JSON: " + moviesJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
-                // If the code didn't successfully get the weather data, there's no point in attemping
-                // to parse it.
                 return null;
             } finally {
                 if (urlConnection != null) {
@@ -183,7 +174,6 @@ public class MoviesFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            // This will only happen if there was an error getting or parsing the forecast.
             return null;
         }
 
@@ -194,7 +184,6 @@ public class MoviesFragment extends Fragment {
                 for(String moviesStr : result) {
                     mMoviesAdapter.add(moviesStr);
                 }
-                // New data is back from the server.  Hooray!
             }
         }
     }
