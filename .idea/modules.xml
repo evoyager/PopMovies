@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file:///cryptfs/git/PopMovies/PopMovies.iml" filepath="/cryptfs/git/PopMovies/PopMovies.iml" />
+      <module fileurl="file:///cryptfs/git/PopMovies/app/app.iml" filepath="/cryptfs/git/PopMovies/app/app.iml" />
+    </modules>
+  </component>
+</project>
