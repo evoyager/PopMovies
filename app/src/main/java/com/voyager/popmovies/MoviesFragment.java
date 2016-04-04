@@ -1,6 +1,5 @@
 package com.voyager.popmovies;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -11,9 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
+import android.widget.GridView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,12 +22,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 
 public class MoviesFragment extends Fragment {
 
-    private ArrayAdapter<String> mMoviesAdapter;
     SharedPreferences prefs;
+    View rootView;
+    String[] posters;
+    GridViewAdapter gvAdapter;
+    GridView gv;
 
     public MoviesFragment() {}
 
@@ -42,27 +41,10 @@ public class MoviesFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        mMoviesAdapter =
-                new ArrayAdapter<String>(
-                  getActivity(),
-                  R.layout.list_item_movie,
-                  R.id.list_item_movie_textview,
-                  new ArrayList<String>());
 
-        View rootView = inflater.inflate(R.layout.fragment_movies, container, false);
+        rootView = inflater.inflate(R.layout.fragment_movies, container, false);
+        gv = (GridView) rootView.findViewById(R.id.grid_view);
 
-        ListView listView = (ListView) rootView.findViewById(R.id.listview_movies);
-        listView.setAdapter(mMoviesAdapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
-                String forecast = mMoviesAdapter.getItem(position);
-                Intent intent = new Intent(getActivity(), DetailActivity.class)
-                        .putExtra(Intent.EXTRA_TEXT, forecast);
-                startActivity(intent);
-            }
-        });
         return rootView;
     }
 
@@ -77,6 +59,7 @@ public class MoviesFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+//        tableLayout = (TableLayout) getActivity().findViewById(R.id.tableLayout);
         updateMovies();
     }
 
@@ -96,16 +79,20 @@ public class MoviesFragment extends Fragment {
             if (numOfMovies > moviesArray.length())
                 numOfMovies = moviesArray.length();
             String[] resultStrs = new String[numOfMovies];
+            posters = new String[numOfMovies];
 
             for(int i = 0; i < numOfMovies; i++) {
                 String title;
                 String rating="";
                 String rating_key;
+                String poster_key = "poster_path";
+                final String POSTER_BASE_URL = "http://image.tmdb.org/t/p/w185/";
                 final String TOP_RATED = "top_rated";
                 final String MOST_POPULAR = "popular";
 
                 JSONObject movie = moviesArray.getJSONObject(i);
                 title = movie.getString("title");
+                posters[i] = POSTER_BASE_URL + movie.getString(poster_key).substring(1);
 
                 switch(sortingMethod) {
                     case TOP_RATED:
@@ -198,12 +185,9 @@ public class MoviesFragment extends Fragment {
 
         @Override
         protected void onPostExecute(String[] result) {
-            if (result != null) {
-                mMoviesAdapter.clear();
-                for(String moviesStr : result) {
-                    mMoviesAdapter.add(moviesStr);
-                }
-            }
+            gvAdapter = new GridViewAdapter(getActivity(), posters);
+            gv.setAdapter(gvAdapter);
+            gv.setOnScrollListener(new PicassoScrollListener(getActivity()));
         }
     }
-}
+ }
