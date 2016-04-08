@@ -1,5 +1,6 @@
 package com.voyager.popmovies;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -10,6 +11,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.GridView;
 
 import org.json.JSONArray;
@@ -27,7 +29,6 @@ public class MoviesFragment extends Fragment {
 
     SharedPreferences prefs;
     View rootView;
-    String[] posters;
     GridViewAdapter gvAdapter;
     GridView gv;
 
@@ -63,12 +64,12 @@ public class MoviesFragment extends Fragment {
         updateMovies();
     }
 
-    public class FetchMoviesTask extends AsyncTask<Integer, Void, String[]> {
+    public class FetchMoviesTask extends AsyncTask<Integer, Void, JSONObject[]> {
 
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
         String sortingMethod;
 
-        private String[] getMoviesDataFromJson(String moviesJsonStr, Integer numOfMovies)
+        private JSONObject[] getMoviesDataFromJson(String moviesJsonStr, Integer numOfMovies)
                 throws JSONException {
 
             final String RESULTS = "results";
@@ -78,42 +79,42 @@ public class MoviesFragment extends Fragment {
 
             if (numOfMovies > moviesArray.length())
                 numOfMovies = moviesArray.length();
-            String[] resultStrs = new String[numOfMovies];
-            posters = new String[numOfMovies];
+            JSONObject[] resultJsonObj = new JSONObject[numOfMovies];
 
             for(int i = 0; i < numOfMovies; i++) {
-                String title;
-                String rating="";
-                String rating_key;
-                String poster_key = "poster_path";
-                final String POSTER_BASE_URL = "http://image.tmdb.org/t/p/w185/";
-                final String TOP_RATED = "top_rated";
-                final String MOST_POPULAR = "popular";
+//                String title;
+//                String rating="";
+//                String rating_key;
+//
+//                final String POSTER_BASE_URL = "http://image.tmdb.org/t/p/w185/";
+//                final String TOP_RATED = "top_rated";
+//                final String MOST_POPULAR = "popular";
 
                 JSONObject movie = moviesArray.getJSONObject(i);
-                title = movie.getString("title");
-                posters[i] = POSTER_BASE_URL + movie.getString(poster_key).substring(1);
+//                title = movie.getString("title");
+//                posters[i] = POSTER_BASE_URL + movie.getString(poster_key).substring(1);
 
-                switch(sortingMethod) {
-                    case TOP_RATED:
-                        rating_key = "vote_average";
-                        rating = "[vote average]: " + movie.getDouble(rating_key);
-                        break;
-                    case MOST_POPULAR:
-                        rating_key = "popularity";
-                        rating = "[popularity]: " + movie.getDouble(rating_key);
-                        break;
-                    default: rating_key = null;
-                }
+//                switch(sortingMethod) {
+//                    case TOP_RATED:
+//                        rating_key = "vote_average";
+//                        rating = "[vote average]: " + movie.getDouble(rating_key);
+//                        break;
+//                    case MOST_POPULAR:
+//                        rating_key = "popularity";
+//                        rating = "[popularity]: " + movie.getDouble(rating_key);
+//                        break;
+//                    default: rating_key = null;
+//                }
 
-                resultStrs[i] = title + "\n" + rating;
+//                resultStrs[i] = title + "\n" + rating;
+                resultJsonObj[i] = movie;
             }
 
-            return resultStrs;
+            return resultJsonObj;
         }
 
         @Override
-        protected String[] doInBackground(Integer... params) {
+        protected JSONObject[] doInBackground(Integer... params) {
 
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
@@ -184,10 +185,33 @@ public class MoviesFragment extends Fragment {
         }
 
         @Override
-        protected void onPostExecute(String[] result) {
+        protected void onPostExecute(final JSONObject[] result) {
+            String[] posters = new String[result.length];;
+            final String POSTER_BASE_URL = "http://image.tmdb.org/t/p/w185/";
+            String poster_key = "poster_path";
+            for(int i = 0; i < result.length; i++) {
+                JSONObject movie = result[i];
+                try {
+                    posters[i] = POSTER_BASE_URL + movie.getString(poster_key).substring(1);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
             gvAdapter = new GridViewAdapter(getActivity(), posters);
             gv.setAdapter(gvAdapter);
             gv.setOnScrollListener(new PicassoScrollListener(getActivity()));
+
+            gv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                    JSONObject forecast = result[position];
+                    Intent intent = new Intent(getActivity(), DetailActivity.class)
+                            .putExtra(Intent.EXTRA_TEXT, forecast.toString());
+                    startActivity(intent);
+                }
+            });
+
         }
     }
  }

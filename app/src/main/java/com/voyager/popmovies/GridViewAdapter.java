@@ -20,7 +20,7 @@ final class GridViewAdapter extends BaseAdapter {
 
         // Ensure we get a different ordering of images on each run.
         Collections.addAll(urls, imgsUrls);
-        Collections.shuffle(urls);
+//        Collections.shuffle(urls);
     }
 
     @Override public View getView(int position, View convertView, ViewGroup parent) {
