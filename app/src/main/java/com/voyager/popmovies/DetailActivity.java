@@ -2,19 +2,33 @@ package com.voyager.popmovies;
 
 
 import android.content.Intent;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.squareup.picasso.Picasso;
+
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class DetailActivity extends ActionBarActivity {
 
@@ -74,9 +88,48 @@ public class DetailActivity extends ActionBarActivity {
                 mMovieStr = intent.getStringExtra(Intent.EXTRA_TEXT);
                 try {
                     JSONObject movie = new JSONObject(mMovieStr);
-                    String title = movie.getString("title");;
+                    String title = movie.getString("title");
                     ((TextView) rootView.findViewById(R.id.detail_title))
                             .setText(title);
+
+                    //Poster
+                    final String POSTER_BASE_URL = "http://image.tmdb.org/t/p/w185/";
+                    final String poster_key = "poster_path";
+                    String poster = POSTER_BASE_URL + movie.getString(poster_key).substring(1);
+                    ImageView ivPoster = (ImageView) rootView.findViewById(R.id.imageView);
+                    Picasso.with(getActivity()).load(poster).into(ivPoster);
+
+                    //Year
+                    String year = movie.getString("release_date").substring(0, 4);;
+                    TextView tvYear = (TextView) rootView.findViewById(R.id.tvYear);
+                    tvYear.setText(year);
+
+                    //Day/Month
+                    String day = movie.getString("release_date").substring(5, 7);;
+                    String month = movie.getString("release_date").substring(8);
+                    String dayMonth = month + "/" + day;
+                    TextView tvDayMonth = (TextView) rootView.findViewById(R.id.tvDayMonth);
+                    tvDayMonth.setText(dayMonth);
+
+                    //Overview
+                    String overview = movie.getString("overview");
+                    TextView tvOverview = (TextView) rootView.findViewById(R.id.tvOverview);
+                    tvOverview.setText(overview);
+
+                    //Trailer
+                    final String TRAILER_BASE_URL = "http://api.themoviedb.org/3/movie/";
+                    String id = movie.getString("id");
+                    final String VIDEOS_KEY = "videos";
+                    final String KEY_PARAM = "api_key";
+                    Uri trailerUri = Uri.parse(TRAILER_BASE_URL).buildUpon()
+                            .appendPath(id)
+                            .appendPath(VIDEOS_KEY)
+                            .appendQueryParameter(KEY_PARAM, BuildConfig.MOVIE_DB_API_KEY)
+                            .build();
+
+                    String trailer = trailerUri.toString();
+                    new FetchMoviesTask(rootView).execute(trailer);
+
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -85,34 +138,96 @@ public class DetailActivity extends ActionBarActivity {
             return rootView;
         }
 
-        @Override
-        public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-            // Inflate the menu; this adds items to the action bar if it is present.
-            inflater.inflate(R.menu.detailfragment, menu);
+        public class FetchMoviesTask extends AsyncTask<String, Void, String> {
 
-//            // Retrieve the share menu item
-//            MenuItem menuItem = menu.findItem(R.id.action_share);
-//
-//            // Get the provider and hold onto it to set/change the share intent.
-//            ShareActionProvider mShareActionProvider =
-//                    (ShareActionProvider) MenuItemCompat.getActionProvider(menuItem);
-//
-//            // Attach an intent to this ShareActionProvider.  You can update this at any time,
-//            // like when the user selects a new piece of data they might like to share.
-//            if (mShareActionProvider != null ) {
-//                mShareActionProvider.setShareIntent(createShareForecastIntent());
-//            } else {
-//                Log.d(LOG_TAG, "Share Action Provider is null?");
-//            }
+            View v;
+
+            FetchMoviesTask(View v) {
+                this.v = v;
+            }
+
+            String getKeyFromJson(String str) {
+                JSONObject trailerJson = null;
+                try {
+                    trailerJson = new JSONObject(str);
+                    final String RESULTS = "results";
+                    JSONArray trailerArray = trailerJson.getJSONArray(RESULTS);
+                    JSONObject resultJsonObj = trailerArray.getJSONObject(0);
+                    String trailerKey = resultJsonObj.getString("key");
+                    return trailerKey;
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+
+            @Override
+            protected String doInBackground(String... params) {
+
+                HttpURLConnection urlConnection = null;
+                BufferedReader reader = null;
+
+                String moviesJsonStr = null;
+                try {
+                URL url = new URL(params[0]);
+
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+                urlConnection.connect();
+
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if (inputStream == null) {
+                    return null;
+                }
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line + "\n");
+                }
+
+                if (buffer.length() == 0) {
+                    return null;
+                }
+                moviesJsonStr = buffer.toString();
+//                Log.v(LOG_TAG, "Pased JSON: " + moviesJsonStr);
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "Error ", e);
+                return null;
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (final IOException e) {
+                        Log.e(LOG_TAG, "Error closing stream", e);
+                    }
+                }
+            }
+
+            try {
+                return getKeyFromJson(moviesJsonStr);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                e.printStackTrace();
+            }
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(String result) {
+                TextView tvTrailer = (TextView)v.findViewById(R.id.tvTrailer);
+                tvTrailer.setText(result);
+            }
         }
 
-        private Intent createShareForecastIntent() {
-            Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
-            shareIntent.setType("text/plain");
-            shareIntent.putExtra(Intent.EXTRA_TEXT,
-                    mMovieStr + MOVIE_SHARE_HASHTAG);
-            return shareIntent;
+        @Override
+        public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+            inflater.inflate(R.menu.detailfragment, menu);
         }
     }
 }
