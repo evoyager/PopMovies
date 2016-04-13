@@ -14,6 +14,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -31,6 +32,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class DetailActivity extends ActionBarActivity {
+
+    private static String trailerLink;
+    private static ImageButton btnTrailer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +85,17 @@ public class DetailActivity extends ActionBarActivity {
                                  Bundle savedInstanceState) {
 
             View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+            btnTrailer = (ImageButton)rootView.findViewById(R.id.btnTrailer);
+            btnTrailer.setOnClickListener(new View.OnClickListener() {
+
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(getActivity(), PlayVideoActivity.class);
+                    intent.putExtra("key", trailerLink);
+                    startActivity(intent);
+                }
+            });
+
 
             // The detail Activity called via intent.  Inspect the intent for forecast data.
             Intent intent = getActivity().getIntent();
@@ -220,8 +235,12 @@ public class DetailActivity extends ActionBarActivity {
 
             @Override
             protected void onPostExecute(String result) {
-                TextView tvTrailer = (TextView)v.findViewById(R.id.tvTrailer);
-                tvTrailer.setText(result);
+//                TextView tvTrailer = (TextView)v.findViewById(R.id.tvTrailer);
+//                tvTrailer.setText(result);
+                trailerLink = result;
+                if (trailerLink != null) {
+                    btnTrailer.setVisibility(View.VISIBLE);
+                }
             }
         }
 
@@ -230,4 +249,6 @@ public class DetailActivity extends ActionBarActivity {
             inflater.inflate(R.menu.detailfragment, menu);
         }
     }
+
+
 }

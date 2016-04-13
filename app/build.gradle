@@ -19,14 +19,17 @@ android {
     }
     buildTypes.each {
         it.buildConfigField 'String', 'MOVIE_DB_API_KEY', '" "'
+        it.buildConfigField 'String', 'YOUTUBE_API_KEY', '" "'
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'com.android.support:support-v4:23.1.1'
     compile 'com.android.support:design:23.1.1'
     compile 'com.squareup.picasso:picasso:2.5.2'
+    compile 'com.google.apis:google-api-services-youtube:v3-rev165-1.21.0'
+    compile files('libs/YouTubeAndroidPlayerApi.jar')
 }

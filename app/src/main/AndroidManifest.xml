@@ -33,6 +33,15 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.voyager.popmovies.MainActivity" />
         </activity>
+        <activity
+            android:name=".PlayVideoActivity"
+            android:label="Trailer" >
+            android:parentActivityName=".DetailActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.voyager.popmovies.MainActivity" />
+
+        </activity>
     </application>
 
 </manifest>
